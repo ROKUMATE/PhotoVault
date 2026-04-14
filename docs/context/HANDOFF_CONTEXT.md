@@ -34,8 +34,13 @@ PhotoVault: unified multi-account Google Photos manager.
 7. Polish
 
 ## Current Status
-- Documentation baseline created in docs/context.
-- Implementation not started yet.
+Step 3 completed: photo sync engine with Google Photos Library API integration.
+- Full TypeScript/TSX codebase throughout (server and client)
+- Photo sync engine with automated token refresh, rate limiting, and exponential backoff
+- BullMQ job queue worker for async sync jobs
+- Sync routes implemented: POST /sync/:accountId, POST /sync/all, GET /sync/status
+- Main server entry point: `server/src/index.ts` (uses tsx runner)
+- Dependencies installed for frontend/backend stack and Prisma client generation is configured.
 
 ## Instruction For Any New Agent Session
 - Follow docs/context files as source of truth.

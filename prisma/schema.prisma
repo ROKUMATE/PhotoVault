@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../server/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  createdAt      DateTime        @default(now())
+  googleAccounts GoogleAccount[]
+}
+
+model GoogleAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email             String
+  accessToken       String
+  refreshToken      String
+  tokenExpiry       DateTime
+  storageUsedBytes  BigInt   @default(0)
+  storageTotalBytes BigInt   @default(16106127360)
+  createdAt         DateTime @default(now())
+  photos            Photo[]
+
+  @@index([userId])
+}
+
+model Photo {
+  id              String        @id @default(cuid())
+  googleAccountId String
+  googleAccount   GoogleAccount @relation(fields: [googleAccountId], references: [id], onDelete: Cascade)
+  googleMediaId   String        @unique
+  filename        String
+  takenAt         DateTime
+  width           Int
+  height          Int
+  thumbnailUrl    String
+  baseUrl         String
+  baseUrlExpiry   DateTime
+  sizeBytes       BigInt
+  isVideo         Boolean       @default(false)
+  syncedAt        DateTime      @default(now())
+
+  @@index([googleAccountId])
+  @@index([takenAt])
+}

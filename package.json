@@ -1,0 +1,37 @@
+{
+  "name": "photovault",
+  "version": "1.0.0",
+  "description": "PhotoVault monorepo",
+  "scripts": {
+    "dev:client": "npm run dev --workspace client",
+    "dev:server": "npm run dev --workspace server",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "build:client": "npm run build --workspace client",
+    "build:server": "npm run build --workspace server",
+    "clean": "rm -rf server/dist client/dist",
+    "prisma:generate": "npm run prisma:generate --workspace server",
+    "prisma:migrate": "npm run prisma:migrate --workspace server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ROKUMATE/PhotoVault.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ROKUMATE/PhotoVault/issues"
+  },
+  "homepage": "https://github.com/ROKUMATE/PhotoVault#readme",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "devDependencies": {
+    "prisma": "^6.16.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.2"
+  }
+}
