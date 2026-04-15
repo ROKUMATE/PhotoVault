@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import Redis from "ioredis";
 import { syncPhotosForAccount, syncPhotosForUser } from "../services/photoSync.js";
-import { isRetryableError, getBackoffMs } from "../utils/backoff.js";
+import { isRetryableError } from "../utils/backoff.js";
 
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
@@ -41,23 +41,8 @@ const syncWorker = new Worker<SyncJobData>(
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`[Worker] Job ${job.id} failed:`, message);
 
-      // Check if error is retryable
-      if (isRetryableError(error)) {
-        const attempt = (job.attemptsMade || 0) + 1;
-
-        if (attempt < 5) {
-          // Max 5 retries
-          const backoffMs = getBackoffMs(attempt - 1);
-          console.log(
-            `[Worker] Retrying job ${job.id} in ${backoffMs.toFixed(0)}ms (attempt ${attempt}/5)`
-          );
-
-          // Throw to trigger retry
-          throw error;
-        } else {
-          console.error(`[Worker] Job ${job.id} failed after 5 retries`);
-          throw new Error(`Max retries exceeded for job ${job.id}`);
-        }
+      if (!isRetryableError(error)) {
+        job.discard();
       }
 
       throw error;

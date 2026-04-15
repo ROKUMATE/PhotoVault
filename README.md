@@ -3,12 +3,14 @@
 PhotoVault is a full-stack app to connect multiple Google accounts and manage Google Photos in one unified interface.
 
 ## Current Status
-Step 3 (Photo Sync Engine) is complete:
+Step 3 and Step 4 backend APIs are complete:
 - Full TypeScript/TSX codebase (backend + frontend)
 - Photo sync engine with Google Photos Library API integration
 - BullMQ worker with rate limiting (3 calls/sec) and exponential backoff
 - Sync routes complete (POST /sync/:accountId, POST /sync/all, GET /sync/status)
 - Token encryption with AES-256
+- Unified photo gallery API (GET /photos, GET /photos/:id, GET /photos/:id/thumbnail)
+- Cursor pagination by createdAt + id and per-account color mapping
 
 ## Previous Completion
 Step 1 foundation initialized:

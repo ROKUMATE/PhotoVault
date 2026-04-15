@@ -1,20 +1,21 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { Express, Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import healthRoutes from "../routes/health.js";
+import notificationsRoutes from "../routes/notifications.js";
+import photosRoutes from "../routes/photos.js";
+import storageRoutes from "../routes/storage.js";
 import syncRoutes from "../routes/sync.js";
+import uploadRoutes from "../routes/upload.js";
+import { closeRebalanceResources, scheduleRebalanceCheck } from "../workers/rebalanceWorker.js";
 import syncWorker from "../workers/syncWorker.js";
+import prisma from "../utils/prisma.js";
+import { attachUserFromHeader } from "../middleware/auth.js";
 
 dotenv.config();
 
 const app: Express = express();
 const port: number = Number(process.env.PORT || 3001);
-const prisma = new PrismaClient();
-
-interface AuthRequest extends Request {
-  userId?: string;
-}
 
 // Initialize the sync worker
 console.log("[Server] Initializing BullMQ sync worker...");
@@ -22,21 +23,29 @@ syncWorker.on("ready", () => {
   console.log("[Server] Sync worker ready and listening for jobs");
 });
 
+scheduleRebalanceCheck()
+  .then(() => {
+    console.log("[Server] Rebalance check scheduled every 24 hours");
+  })
+  .catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Server] Failed to schedule rebalance check:", message);
+  });
+
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
 app.use(express.json());
 
 // Placeholder: auth middleware (to be implemented in Step 2 with OAuth)
-app.use((req: AuthRequest, res: Response, next: NextFunction) => {
-  // TODO: Replace with actual session/JWT verification when Step 2 is complete
-  // For now, extract userId from header for testing
-  req.userId = req.headers["x-user-id"] as string | undefined;
-  next();
-});
+app.use(attachUserFromHeader);
 
 // Routes
 app.use("/", healthRoutes);
 app.use("/sync", syncRoutes);
+app.use("/photos", photosRoutes);
+app.use("/upload", uploadRoutes);
+app.use("/storage", storageRoutes);
+app.use("/notifications", notificationsRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -53,6 +62,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 process.on("SIGTERM", async () => {
   console.log("[Server] SIGTERM received, shutting down gracefully...");
   await syncWorker.close();
+  await closeRebalanceResources();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -60,6 +70,7 @@ process.on("SIGTERM", async () => {
 process.on("SIGINT", async () => {
   console.log("[Server] SIGINT received, shutting down gracefully...");
   await syncWorker.close();
+  await closeRebalanceResources();
   await prisma.$disconnect();
   process.exit(0);
 });

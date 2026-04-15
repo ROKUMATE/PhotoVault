@@ -13,6 +13,7 @@ model User {
   email          String          @unique
   createdAt      DateTime        @default(now())
   googleAccounts GoogleAccount[]
+  notifications  Notification[]
 }
 
 model GoogleAccount {
@@ -45,8 +46,20 @@ model Photo {
   baseUrlExpiry   DateTime
   sizeBytes       BigInt
   isVideo         Boolean       @default(false)
+  createdAt       DateTime      @default(now())
   syncedAt        DateTime      @default(now())
 
   @@index([googleAccountId])
   @@index([takenAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  seen      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, seen, createdAt])
 }

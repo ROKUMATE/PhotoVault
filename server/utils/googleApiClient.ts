@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { PrismaClient, GoogleAccount } from "@prisma/client";
+import { decryptToken, encryptToken } from "./encryption.js";
 
 const GOOGLE_PHOTOS_API_BASE = "https://photoslibrary.googleapis.com/v1";
 const GOOGLE_DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
@@ -15,13 +16,24 @@ interface MediaItem {
   baseUrl?: string;
   mimeType?: string;
   mediaFile?: {
-    size?: string;
+    sizeBytes?: string;
   };
 }
 
 interface MediaItemsResponse {
   mediaItems?: MediaItem[];
   nextPageToken: string | null;
+}
+
+interface BatchCreateResponse {
+  newMediaItemResults?: Array<{
+    uploadToken?: string;
+    status?: {
+      code?: number;
+      message?: string;
+    };
+    mediaItem?: MediaItem;
+  }>;
 }
 
 interface StorageQuota {
@@ -38,15 +50,17 @@ interface GoogleApiError extends Error {
   retryAfter?: string;
 }
 
+type GoogleAccountWithTokens = Pick<GoogleAccount, "id" | "accessToken" | "refreshToken" | "tokenExpiry">;
+
 /**
  * Client wrapper for Google Photos and Drive APIs
  * Handles automatic token refresh and error handling
  */
 class GoogleApiClient {
-  private googleAccount: GoogleAccount;
+  private googleAccount: GoogleAccountWithTokens;
   private prismaClient: PrismaClient;
 
-  constructor(googleAccount: GoogleAccount, prismaClient: PrismaClient) {
+  constructor(googleAccount: GoogleAccountWithTokens, prismaClient: PrismaClient) {
     this.googleAccount = googleAccount;
     this.prismaClient = prismaClient;
   }
@@ -70,13 +84,14 @@ class GoogleApiClient {
    */
   private async refreshToken(): Promise<void> {
     try {
+      const decryptedRefreshToken = decryptToken(this.googleAccount.refreshToken);
       const response = await axios.post<{
         access_token: string;
         expires_in: number;
       }>("https://oauth2.googleapis.com/token", {
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        refresh_token: this.googleAccount.refreshToken,
+        refresh_token: decryptedRefreshToken,
         grant_type: "refresh_token",
       });
 
@@ -84,13 +99,20 @@ class GoogleApiClient {
 
       // Update in database
       const newExpiry = new Date(Date.now() + expires_in * 1000);
-      this.googleAccount = await this.prismaClient.googleAccount.update({
+      const refreshedAccount = await this.prismaClient.googleAccount.update({
         where: { id: this.googleAccount.id },
         data: {
-          accessToken: access_token,
+          accessToken: encryptToken(access_token),
           tokenExpiry: newExpiry,
         },
       });
+
+      this.googleAccount = {
+        id: refreshedAccount.id,
+        accessToken: access_token,
+        refreshToken: decryptedRefreshToken,
+        tokenExpiry: refreshedAccount.tokenExpiry,
+      };
     } catch (error: unknown) {
       const message =
         error instanceof AxiosError ? error.message : "Unknown error during token refresh";
@@ -100,25 +122,21 @@ class GoogleApiClient {
   }
 
   /**
-   * Fetch media items from Google Photos Library API
+   * Fetch media items from Google Photos Library API using mediaItems.list
    */
   async fetchMediaItems(pageToken: string | null = null): Promise<MediaItemsResponse> {
     const accessToken = await this.getValidAccessToken();
 
     try {
-      const response = await axios.post<MediaItemsResponse>(
-        `${GOOGLE_PHOTOS_API_BASE}/mediaItems:search`,
-        {
+      const response = await axios.get<MediaItemsResponse>(`${GOOGLE_PHOTOS_API_BASE}/mediaItems`, {
+        params: {
           pageSize: 100,
           pageToken: pageToken || undefined,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
       return {
         mediaItems: response.data.mediaItems || [],
@@ -134,6 +152,89 @@ class GoogleApiClient {
       }
       throw error;
     }
+  }
+
+  /**
+   * Fetch a single media item by ID from Google Photos Library API
+   */
+  async fetchMediaItem(mediaItemId: string): Promise<MediaItem> {
+    const accessToken = await this.getValidAccessToken();
+
+    try {
+      const response = await axios.get<MediaItem>(
+        `${GOOGLE_PHOTOS_API_BASE}/mediaItems/${mediaItemId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 429) {
+        const googleError: GoogleApiError = new Error("Rate limited");
+        googleError.status = 429;
+        googleError.retryAfter = axiosError.response.headers["retry-after"] as string;
+        throw googleError;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Upload raw file bytes to Google Photos and return upload token
+   */
+  async uploadBytes(fileBuffer: Buffer, mimeType: string, fileName: string): Promise<string> {
+    const accessToken = await this.getValidAccessToken();
+
+    const response = await axios.post<string>(`${GOOGLE_PHOTOS_API_BASE}/uploads`, fileBuffer, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-type": "application/octet-stream",
+        "X-Goog-Upload-Content-Type": mimeType,
+        "X-Goog-Upload-Protocol": "raw",
+        "X-Goog-Upload-File-Name": fileName,
+      },
+      responseType: "text",
+    });
+
+    return response.data;
+  }
+
+  /**
+   * Create a media item from upload token
+   */
+  async createMediaItem(uploadToken: string, fileName: string): Promise<MediaItem> {
+    const accessToken = await this.getValidAccessToken();
+
+    const response = await axios.post<BatchCreateResponse>(
+      `${GOOGLE_PHOTOS_API_BASE}/mediaItems:batchCreate`,
+      {
+        newMediaItems: [
+          {
+            simpleMediaItem: {
+              uploadToken,
+              fileName,
+            },
+          },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const result = response.data.newMediaItemResults?.[0];
+    if (!result || !result.mediaItem) {
+      throw new Error(result?.status?.message || "Failed to create media item");
+    }
+
+    return result.mediaItem;
   }
 
   /**

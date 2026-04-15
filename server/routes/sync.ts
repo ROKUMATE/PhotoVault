@@ -1,30 +1,57 @@
-import express, { Router, Request, Response, NextFunction } from "express";
+import express, { Router, Response } from "express";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma.js";
+import { AuthRequest, requireAuth } from "../middleware/auth.js";
 
 const router: Router = express.Router();
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 const syncQueue = new Queue("photo-sync", { connection: redis });
-const prisma = new PrismaClient();
-
-interface AuthRequest extends Request {
-  userId?: string;
-}
 
 /**
- * Auth middleware to ensure user is logged in
- * TODO: Integrate with actual session/auth when Step 2 is complete
+ * POST /sync/all
+ * Trigger sync for all accounts of the logged-in user
  */
-function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  // For now, this is a placeholder
-  // In production, this would check req.session.user
-  if (!req.userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
+router.post("/all", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    // Add job to queue
+    const job = await syncQueue.add(
+      "sync-user",
+      { type: "sync-user", userId },
+      {
+        priority: 5, // Normal priority for full-user sync
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 1000,
+        },
+        removeOnComplete: {
+          age: 3600,
+        },
+        removeOnFail: {
+          age: 86400,
+        },
+      }
+    );
+
+    res.status(202).json({
+      message: "Full sync started for all accounts",
+      jobId: job.id,
+      userId,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("POST /sync/all error:", message);
+    res.status(500).json({ error: message });
   }
-  next();
-}
+});
 
 /**
  * POST /sync/:accountId
@@ -56,7 +83,17 @@ router.post("/:accountId", requireAuth, async (req: AuthRequest, res: Response) 
       { type: "sync-account", accountId, userId },
       {
         priority: 10, // High priority for manual sync
-        removeOnComplete: true,
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 1000,
+        },
+        removeOnComplete: {
+          age: 3600,
+        },
+        removeOnFail: {
+          age: 86400,
+        },
       }
     );
 
@@ -68,41 +105,6 @@ router.post("/:accountId", requireAuth, async (req: AuthRequest, res: Response) 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("POST /sync/:accountId error:", message);
-    res.status(500).json({ error: message });
-  }
-});
-
-/**
- * POST /sync/all
- * Trigger sync for all accounts of the logged-in user
- */
-router.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId;
-
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    // Add job to queue
-    const job = await syncQueue.add(
-      "sync-user",
-      { type: "sync-user", userId },
-      {
-        priority: 5, // Normal priority for full-user sync
-        removeOnComplete: true,
-      }
-    );
-
-    res.status(202).json({
-      message: "Full sync started for all accounts",
-      jobId: job.id,
-      userId,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("POST /sync/all error:", message);
     res.status(500).json({ error: message });
   }
 });

@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import GoogleApiClient from "../utils/googleApiClient.js";
 import { RateLimiter } from "../utils/rateLimiter.js";
+import { decryptToken } from "../utils/encryption.js";
+import prisma from "../utils/prisma.js";
 
-const prisma = new PrismaClient();
 const rateLimiter = new RateLimiter(3); // Max 3 Google API calls per second
 
 interface SyncResult {
@@ -25,10 +25,8 @@ interface SyncResultWithError extends Partial<SyncResult> {
  * Fetches all media items from Google Photos and stores metadata in DB
  */
 export async function syncPhotosForAccount(googleAccountId: string): Promise<SyncResult> {
-  let account;
-
   try {
-    account = await prisma.googleAccount.findUnique({
+    const account = await prisma.googleAccount.findUnique({
       where: { id: googleAccountId },
       include: { user: true },
     });
@@ -39,7 +37,14 @@ export async function syncPhotosForAccount(googleAccountId: string): Promise<Syn
 
     console.log(`[Sync] Starting sync for account ${account.email}`);
 
-    const apiClient = new GoogleApiClient(account, prisma);
+    const apiClient = new GoogleApiClient(
+      {
+        ...account,
+        accessToken: decryptToken(account.accessToken),
+        refreshToken: decryptToken(account.refreshToken),
+      },
+      prisma
+    );
 
     let pageToken: string | null = null;
     let totalPhotosProcessed = 0;
@@ -69,10 +74,10 @@ export async function syncPhotosForAccount(googleAccountId: string): Promise<Syn
           takenAt: new Date(item.mediaMetadata.creationTime),
           width: item.mediaMetadata.width ? parseInt(item.mediaMetadata.width, 10) : 0,
           height: item.mediaMetadata.height ? parseInt(item.mediaMetadata.height, 10) : 0,
-          thumbnailUrl: item.baseUrl ? `${item.baseUrl}=w200-h200` : "",
+          thumbnailUrl: item.baseUrl ? `${item.baseUrl}=w512-h512` : "",
           baseUrl: item.baseUrl || "",
           baseUrlExpiry: new Date(Date.now() + 55 * 60 * 1000), // ~1 hour from now, refresh at 55 min
-          sizeBytes: item.mediaFile?.size ? BigInt(item.mediaFile.size) : BigInt(0),
+          sizeBytes: item.mediaFile?.sizeBytes ? BigInt(item.mediaFile.sizeBytes) : BigInt(0),
           isVideo: item.mimeType?.startsWith("video/") || false,
           syncedAt: new Date(),
         };
