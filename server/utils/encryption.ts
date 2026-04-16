@@ -13,6 +13,10 @@ const ALGORITHM = "aes-256-cbc";
 export function encryptToken(plaintext: string): string {
   const key = Buffer.from(process.env.ENCRYPTION_KEY || "", "hex");
 
+  if (key.length !== 32) {
+    return `demo:${plaintext}`;
+  }
+
   // Generate random IV
   const iv = crypto.randomBytes(16);
 
@@ -28,7 +32,15 @@ export function encryptToken(plaintext: string): string {
  * Decrypt a string value
  */
 export function decryptToken(encryptedWithIv: string): string {
+  if (encryptedWithIv.startsWith("demo:")) {
+    return encryptedWithIv.slice("demo:".length);
+  }
+
   const key = Buffer.from(process.env.ENCRYPTION_KEY || "", "hex");
+
+  if (key.length !== 32) {
+    return encryptedWithIv;
+  }
 
   const [ivHex, encrypted] = encryptedWithIv.split(":");
   const iv = Buffer.from(ivHex, "hex");

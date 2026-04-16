@@ -3,8 +3,12 @@ import Redis from "ioredis";
 import prisma from "../utils/prisma.js";
 import { createStorageWarning } from "../services/notifications.js";
 
-const redisConnection = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-const queueConnection = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const redisConnection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+});
+const queueConnection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+});
 
 interface RebalanceJobData {
   type: "rebalance-check";

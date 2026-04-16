@@ -5,7 +5,9 @@ export interface AuthRequest extends Request {
 }
 
 export function attachUserFromHeader(req: AuthRequest, _res: Response, next: NextFunction): void {
-  req.userId = req.headers["x-user-id"] as string | undefined;
+  const headerUserId = req.headers["x-user-id"] as string | undefined;
+  const sessionUserId = (req.session as { userId?: string } | undefined)?.userId;
+  req.userId = headerUserId || sessionUserId;
   next();
 }
 

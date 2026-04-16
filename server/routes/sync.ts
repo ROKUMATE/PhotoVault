@@ -1,12 +1,9 @@
 import express, { Router, Response } from "express";
-import { Queue } from "bullmq";
-import Redis from "ioredis";
 import prisma from "../utils/prisma.js";
 import { AuthRequest, requireAuth } from "../middleware/auth.js";
+import { enqueueAccountSync, enqueueUserSync, syncQueue } from "../utils/syncQueue.js";
 
 const router: Router = express.Router();
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-const syncQueue = new Queue("photo-sync", { connection: redis });
 
 /**
  * POST /sync/all
@@ -21,29 +18,11 @@ router.post("/all", requireAuth, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Add job to queue
-    const job = await syncQueue.add(
-      "sync-user",
-      { type: "sync-user", userId },
-      {
-        priority: 5, // Normal priority for full-user sync
-        attempts: 5,
-        backoff: {
-          type: "exponential",
-          delay: 1000,
-        },
-        removeOnComplete: {
-          age: 3600,
-        },
-        removeOnFail: {
-          age: 86400,
-        },
-      }
-    );
+    const jobId = await enqueueUserSync(userId);
 
     res.status(202).json({
       message: "Full sync started for all accounts",
-      jobId: job.id,
+      jobId,
       userId,
     });
   } catch (error: unknown) {
@@ -59,7 +38,7 @@ router.post("/all", requireAuth, async (req: AuthRequest, res: Response) => {
  */
 router.post("/:accountId", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { accountId } = req.params;
+    const accountId = String(req.params.accountId);
     const userId = req.userId;
 
     if (!userId) {
@@ -77,29 +56,11 @@ router.post("/:accountId", requireAuth, async (req: AuthRequest, res: Response) 
       return;
     }
 
-    // Add job to queue
-    const job = await syncQueue.add(
-      "sync-account",
-      { type: "sync-account", accountId, userId },
-      {
-        priority: 10, // High priority for manual sync
-        attempts: 5,
-        backoff: {
-          type: "exponential",
-          delay: 1000,
-        },
-        removeOnComplete: {
-          age: 3600,
-        },
-        removeOnFail: {
-          age: 86400,
-        },
-      }
-    );
+    const jobId = await enqueueAccountSync(accountId, userId);
 
     res.status(202).json({
       message: "Sync started",
-      jobId: job.id,
+      jobId,
       accountId,
     });
   } catch (error: unknown) {

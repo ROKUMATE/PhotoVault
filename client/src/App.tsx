@@ -36,6 +36,15 @@ function App() {
       const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
       window.history.replaceState({}, document.title, nextUrl);
     }
+
+    const authError = params.get("authError");
+    if (authError) {
+      toast.error(authError);
+      params.delete("authError");
+      const nextSearch = params.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState({}, document.title, nextUrl);
+    }
   }, []);
 
   if (!auth.isAuthenticated) {

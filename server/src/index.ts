@@ -1,6 +1,8 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { Express } from "express";
+import session from "express-session";
+import passport from "passport";
 import authRoutes from "../routes/auth.js";
 import healthRoutes from "../routes/health.js";
 import notificationsRoutes from "../routes/notifications.js";
@@ -14,6 +16,7 @@ import syncWorker from "../workers/syncWorker.js";
 import prisma from "../utils/prisma.js";
 import { attachUserFromHeader } from "../middleware/auth.js";
 
+dotenv.config({ path: new URL("../../.env", import.meta.url).pathname });
 dotenv.config();
 
 const app: Express = express();
@@ -37,8 +40,19 @@ scheduleRebalanceCheck()
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
 app.use(express.json());
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "photovault-dev-session-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      sameSite: "lax",
+      secure: false,
+    },
+  })
+);
+app.use(passport.initialize());
 
-// Placeholder: auth middleware (to be implemented in Step 2 with OAuth)
 app.use(attachUserFromHeader);
 
 // Routes

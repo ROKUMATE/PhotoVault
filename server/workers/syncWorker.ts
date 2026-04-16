@@ -3,7 +3,9 @@ import Redis from "ioredis";
 import { syncPhotosForAccount, syncPhotosForUser } from "../services/photoSync.js";
 import { isRetryableError } from "../utils/backoff.js";
 
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+});
 
 interface SyncJobData {
   type: "sync-account" | "sync-user";
