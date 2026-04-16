@@ -1,5 +1,7 @@
 import { http } from "./http";
 import type {
+  ConnectedAccountsResponse,
+  DisconnectAccountResponse,
   GalleryPageResponse,
   NotificationResponse,
   StorageSummaryResponse,
@@ -52,5 +54,15 @@ export async function fetchThumbnailBlob(photoId: string): Promise<Blob> {
     responseType: "blob",
   });
 
+  return response.data;
+}
+
+export async function fetchConnectedAccounts(): Promise<ConnectedAccountsResponse> {
+  const response = await http.get<ConnectedAccountsResponse>("/auth/accounts");
+  return response.data;
+}
+
+export async function disconnectAccount(accountId: string): Promise<DisconnectAccountResponse> {
+  const response = await http.delete<DisconnectAccountResponse>(`/auth/accounts/${accountId}`);
   return response.data;
 }

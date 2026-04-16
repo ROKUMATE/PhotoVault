@@ -9,9 +9,10 @@ import { getApiBaseUrl } from "../api/http";
 interface DashboardPageProps {
   onAddAccount: () => void;
   onAvatarClick: () => void;
+  onOpenSettings: () => void;
 }
 
-export function DashboardPage({ onAddAccount, onAvatarClick }: DashboardPageProps) {
+export function DashboardPage({ onAddAccount, onAvatarClick, onOpenSettings }: DashboardPageProps) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("added") === "1" || params.get("accountAdded") === "1") {
@@ -26,7 +27,13 @@ export function DashboardPage({ onAddAccount, onAvatarClick }: DashboardPageProp
 
   return (
     <div className="min-h-screen bg-[#050816] text-white">
-      <Navbar onAddAccount={onAddAccount} onAvatarClick={onAvatarClick} />
+      <Navbar
+        onAddAccount={onAddAccount}
+        onAvatarClick={onAvatarClick}
+        onOpenSettings={onOpenSettings}
+        onOpenDashboard={() => {}}
+        currentView="dashboard"
+      />
 
       <div className="mx-auto flex w-full max-w-[1600px] gap-6 px-4 py-6 lg:px-6">
         <div className="hidden w-[340px] shrink-0 lg:block">

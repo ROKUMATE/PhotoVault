@@ -1,12 +1,14 @@
 import cors from "cors";
 import dotenv from "dotenv";
-import express, { Express, Request, Response, NextFunction } from "express";
+import express, { Express } from "express";
+import authRoutes from "../routes/auth.js";
 import healthRoutes from "../routes/health.js";
 import notificationsRoutes from "../routes/notifications.js";
 import photosRoutes from "../routes/photos.js";
 import storageRoutes from "../routes/storage.js";
 import syncRoutes from "../routes/sync.js";
 import uploadRoutes from "../routes/upload.js";
+import { errorHandler, notFoundHandler } from "../middleware/error.js";
 import { closeRebalanceResources, scheduleRebalanceCheck } from "../workers/rebalanceWorker.js";
 import syncWorker from "../workers/syncWorker.js";
 import prisma from "../utils/prisma.js";
@@ -41,6 +43,7 @@ app.use(attachUserFromHeader);
 
 // Routes
 app.use("/", healthRoutes);
+app.use("/auth", authRoutes);
 app.use("/sync", syncRoutes);
 app.use("/photos", photosRoutes);
 app.use("/upload", uploadRoutes);
@@ -48,15 +51,10 @@ app.use("/storage", storageRoutes);
 app.use("/notifications", notificationsRoutes);
 
 // 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ error: "Route not found" });
-});
+app.use(notFoundHandler);
 
 // Error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("Unhandled error:", err.message);
-  res.status(500).json({ error: err.message || "Internal server error" });
-});
+app.use(errorHandler);
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {

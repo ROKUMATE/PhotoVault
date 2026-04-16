@@ -70,3 +70,21 @@ export interface NotificationResponse {
   count: number;
   notifications: NotificationItem[];
 }
+
+export interface ConnectedAccount {
+  id: string;
+  email: string;
+  usedGB: number;
+  totalGB: number;
+  freeGB: number;
+  percentUsed: number;
+}
+
+export interface ConnectedAccountsResponse {
+  accounts: ConnectedAccount[];
+}
+
+export interface DisconnectAccountResponse {
+  message: string;
+  accountId: string;
+}

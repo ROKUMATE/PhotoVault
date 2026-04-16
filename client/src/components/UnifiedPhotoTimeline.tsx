@@ -41,7 +41,7 @@ export function UnifiedPhotoTimeline() {
         {Array.from({ length: 3 }).map((_, sectionIndex) => (
           <div key={sectionIndex} className="space-y-4">
             <div className="h-5 w-48 animate-pulse rounded-full bg-white/10" />
-            <div className="grid grid-cols-3 gap-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
               {Array.from({ length: 10 }).map((__, cardIndex) => (
                 <div key={cardIndex} className="aspect-[4/5] animate-pulse rounded-[24px] bg-white/8" />
               ))}
@@ -81,7 +81,7 @@ export function UnifiedPhotoTimeline() {
             <h3 className="text-sm font-semibold tracking-[0.16em] text-sky-200 uppercase">{formatDateLabel(group.date)}</h3>
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           </div>
-          <div className="grid grid-cols-3 gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
             {group.photos.map((photo) => (
               <PhotoCard key={photo.id} photo={photo} />
             ))}

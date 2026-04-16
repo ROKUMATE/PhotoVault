@@ -4,9 +4,18 @@ import { getApiBaseUrl } from "../api/http";
 interface NavbarProps {
   onAddAccount: () => void;
   onAvatarClick: () => void;
+  onOpenSettings: () => void;
+  onOpenDashboard: () => void;
+  currentView: "dashboard" | "settings";
 }
 
-export function Navbar({ onAddAccount, onAvatarClick }: NavbarProps) {
+export function Navbar({
+  onAddAccount,
+  onAvatarClick,
+  onOpenSettings,
+  onOpenDashboard,
+  currentView,
+}: NavbarProps) {
   const apiBaseUrl = getApiBaseUrl();
 
   return (
@@ -23,6 +32,24 @@ export function Navbar({ onAddAccount, onAvatarClick }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          {currentView === "dashboard" ? (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
+            >
+              Settings
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
+            >
+              Dashboard
+            </button>
+          )}
+
           <a
             href={`${apiBaseUrl}/auth/google/add-account`}
             onClick={onAddAccount}
