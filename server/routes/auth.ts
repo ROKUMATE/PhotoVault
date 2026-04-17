@@ -37,7 +37,7 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
 const oauthConfigured = Boolean(googleClientId && googleClientSecret);
 
 const googleScopes = [
-  "https://www.googleapis.com/auth/photoslibrary",
+  "https://www.googleapis.com/auth/photoslibrary.readonly",
   "https://www.googleapis.com/auth/drive.metadata.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
 ];

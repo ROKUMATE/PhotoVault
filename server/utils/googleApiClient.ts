@@ -84,14 +84,13 @@ class GoogleApiClient {
    */
   private async refreshToken(): Promise<void> {
     try {
-      const decryptedRefreshToken = decryptToken(this.googleAccount.refreshToken);
       const response = await axios.post<{
         access_token: string;
         expires_in: number;
       }>("https://oauth2.googleapis.com/token", {
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        refresh_token: decryptedRefreshToken,
+        refresh_token: this.googleAccount.refreshToken,
         grant_type: "refresh_token",
       });
 
@@ -110,7 +109,7 @@ class GoogleApiClient {
       this.googleAccount = {
         id: refreshedAccount.id,
         accessToken: access_token,
-        refreshToken: decryptedRefreshToken,
+        refreshToken: this.googleAccount.refreshToken,
         tokenExpiry: refreshedAccount.tokenExpiry,
       };
     } catch (error: unknown) {
