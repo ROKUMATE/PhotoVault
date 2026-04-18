@@ -55,3 +55,9 @@ Users with 2-10 Google accounts used for extra storage of photos/videos.
 - https://www.googleapis.com/auth/photoslibrary
 - https://www.googleapis.com/auth/drive.metadata.readonly
 - https://www.googleapis.com/auth/userinfo.email
+## April 2026 Architectural Shift
+Due to restrictive changes in the Google Photos Library API (removal of `photoslibrary.readonly`), PhotoVault resolves to use the **Google Photos Picker API** (Option 2) to manually import historical photos per user selection. To ensure long-tail viability for a unified storage dashboard without restrictions, the product will eventually pivot to utilizing Google Drive (Option 3) as the backend image storage vault.
+
+
+## April 2026 Architectural Shift
+Due to restrictive changes in the Google Photos Library API (removal of `photoslibrary.readonly`), PhotoVault resolves to use the **Google Photos Picker API** (Option 2) to manually import historical photos per user selection. To ensure long-tail viability for a unified storage dashboard without restrictions, the product will eventually pivot to utilizing Google Drive (Option 3) as the backend image storage vault.

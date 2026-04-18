@@ -51,3 +51,13 @@ Step 4 completed as well: unified photo gallery API.
 
 ## Quick Resume Prompt
 "Continue PhotoVault from this repository. Read docs/context/PROJECT_BRIEF.md, docs/context/ARCHITECTURE_DECISIONS.md, docs/context/API_CONTRACT.md, docs/context/BUILD_PLAN.md, and docs/context/HANDOFF_CONTEXT.md. Then implement the next requested step without deviating from these constraints."
+
+
+## April 2026 Architectural Pivot
+Due to `403 Permission Denied` errors from Google's strict new April 2025 library API limits, the `photoslibrary.readonly` scope is permanently inaccessible for background syncing.
+
+**Option 2 Execution (Current Focus):**
+We will implement the Google Photos Picker API on the frontend. Users will open a Google pop-up UI to manually select their old historical photos across accounts and expressly import them into PhotoVault.
+
+**Option 3 Execution (Future Focus):**
+We will decouple our backend from strictly "Photos" and build an abstraction so users can store their newly uploaded images automatically into raw Google Drive folders using the `drive` API scope since Google Drive has not blocked full historical read/write access to folder contents. Background sync workers are now restricted to `appcreateddata` only.
