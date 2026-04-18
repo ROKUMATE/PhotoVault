@@ -88,3 +88,10 @@ export interface DisconnectAccountResponse {
   message: string;
   accountId: string;
 }
+
+export interface PickerAuthResponse {
+  accessToken: string;
+  apiKey: string;
+  clientId: string;
+  appId: string;
+}

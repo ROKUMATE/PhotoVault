@@ -4,6 +4,7 @@ import type {
   DisconnectAccountResponse,
   GalleryPageResponse,
   NotificationResponse,
+  PickerAuthResponse,
   StorageSummaryResponse,
   UploadResponse,
 } from "./types";
@@ -64,5 +65,18 @@ export async function fetchConnectedAccounts(): Promise<ConnectedAccountsRespons
 
 export async function disconnectAccount(accountId: string): Promise<DisconnectAccountResponse> {
   const response = await http.delete<DisconnectAccountResponse>(`/auth/accounts/${accountId}`);
+  return response.data;
+}
+
+export async function fetchPickerAuth(accountId: string): Promise<PickerAuthResponse> {
+  const response = await http.get<PickerAuthResponse>(`/auth/accounts/${accountId}/picker-auth`);
+  return response.data;
+}
+
+export async function importPickedPhotos(accountId: string, mediaItems: any[]): Promise<{ imported: number }> {
+  const response = await http.post<{ imported: number }>('/photos/import', {
+    accountId,
+    mediaItems
+  });
   return response.data;
 }

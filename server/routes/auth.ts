@@ -3,10 +3,11 @@ import dotenv from "dotenv";
 import passport, { Profile } from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { AuthRequest, requireAuth } from "../middleware/auth.js";
-import { encryptToken } from "../utils/encryption.js";
+import { encryptToken, decryptToken } from "../utils/encryption.js";
 import prisma from "../utils/prisma.js";
 import { AppError } from "../middleware/error.js";
 import { enqueueAccountSync, enqueueUserSync } from "../utils/syncQueue.js";
+import GoogleApiClient from "../utils/googleApiClient.js";
 
 type OAuthMode = "login" | "add-account";
 
@@ -430,6 +431,49 @@ router.get("/accounts", requireAuth, async (req: AuthRequest, res: Response, nex
     });
 
     res.status(200).json({ accounts: formatted });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/accounts/:id/picker-auth", requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const accountId = String(req.params.id);
+
+    if (!userId) {
+      throw new AppError("Unauthorized", 401);
+    }
+
+    const account = await prisma.googleAccount.findFirst({
+      where: {
+        id: accountId,
+        userId,
+      },
+    });
+
+    if (!account) {
+      throw new AppError("Account not found", 404);
+    }
+
+    const apiClient = new GoogleApiClient(
+      {
+        id: account.id,
+        accessToken: decryptToken(account.accessToken),
+        refreshToken: decryptToken(account.refreshToken),
+        tokenExpiry: account.tokenExpiry,
+      },
+      prisma
+    );
+
+    const validToken = await apiClient.getValidAccessToken();
+
+    res.status(200).json({
+      accessToken: validToken,
+      apiKey: process.env.GOOGLE_PICKER_API_IMAGES || "",
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      appId: process.env.GOOGLE_CLIENT_ID?.split("-")[0] || "",
+    });
   } catch (error) {
     next(error);
   }

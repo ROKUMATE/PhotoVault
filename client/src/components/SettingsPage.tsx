@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { disconnectAccount, fetchConnectedAccounts } from "../api/photoVaultApi";
 import { Navbar } from "./Navbar";
 import { getAccountColor } from "../utils/accountColors";
+import { useGooglePicker } from "../hooks/useGooglePicker";
 
 interface SettingsPageProps {
   onAddAccount: () => void;
@@ -33,6 +34,7 @@ export function SettingsPage({ onAddAccount, onAvatarClick, onOpenDashboard }: S
   });
 
   const accounts = accountsQuery.data?.accounts ?? [];
+  const { loadPicker, isLoading: isPickerLoading } = useGooglePicker();
 
   return (
     <div className="min-h-screen bg-[#050816] text-white">
@@ -89,14 +91,26 @@ export function SettingsPage({ onAddAccount, onAvatarClick, onOpenDashboard }: S
                     <p className="font-medium text-white">{account.email}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => disconnectMutation.mutate(account.id)}
-                    disabled={disconnectMutation.isPending}
-                    className="rounded-xl border border-rose-300/35 bg-rose-500/12 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/22 disabled:opacity-60"
-                  >
-                    Disconnect
-                  </button>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadPicker(account.id, () => queryClient.invalidateQueries({ queryKey: ["photos"] }))}
+                      disabled={isPickerLoading}
+                      className="rounded-xl border border-sky-300/35 bg-sky-500/12 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/22 disabled:opacity-60"
+                    >
+                      Import Historical Photos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => disconnectMutation.mutate(account.id)}
+                      disabled={disconnectMutation.isPending}
+                      className="rounded-xl border border-rose-300/35 bg-rose-500/12 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/22 disabled:opacity-60"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+
                 </div>
 
                 <p className="mb-3 text-xs text-slate-400">
