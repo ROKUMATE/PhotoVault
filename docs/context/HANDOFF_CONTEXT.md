@@ -56,8 +56,10 @@ Step 4 completed as well: unified photo gallery API.
 ## April 2026 Architectural Pivot
 Due to `403 Permission Denied` errors from Google's strict new April 2025 library API limits, the `photoslibrary.readonly` scope is permanently inaccessible for background syncing.
 
-**Option 2 Execution (Current Focus):**
-We will implement the Google Photos Picker API on the frontend. Users will open a Google pop-up UI to manually select their old historical photos across accounts and expressly import them into PhotoVault.
+**Option 2 Execution (Completed):**
+We successfully implemented the Google Photos Picker API integration. 
+- **Frontend:** `useGooglePicker` hook manages the Google Picker UI lifecycle using `gapi.picker`. Added "Import Historical Photos" button to `SettingsPage.tsx` for per-account imports.
+- **Backend:** Exposed `GET /auth/accounts/:id/picker-auth` to supply secure tokens and `POST /photos/import` to ingest raw image metadata manually chosen by the user, bypassing the read-only block.
 
 **Option 3 Execution (Future Focus):**
 We will decouple our backend from strictly "Photos" and build an abstraction so users can store their newly uploaded images automatically into raw Google Drive folders using the `drive` API scope since Google Drive has not blocked full historical read/write access to folder contents. Background sync workers are now restricted to `appcreateddata` only.

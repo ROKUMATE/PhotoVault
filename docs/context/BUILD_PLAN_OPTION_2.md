@@ -1,4 +1,8 @@
-# Option 2 Implementation Plan: Google Photos Picker API
+# Option 2 Implementation Plan: Google Photos Picker API (COMPLETED ✅)
+
+All 4 phases (Setup, Frontend Hook, Backend Bridge `/photos/import`, and Settings Dashboard UI integration) have been successfully built and merged into the main stack.
+
+
 
 ## Phase 1: Authentication & Setup
 1. Modify Google Cloud Console OAuth consent screen to keep `photoslibrary.readonly.appcreateddata` and `photoslibrary.appendonly`.
